@@ -1,0 +1,186 @@
+---
+title: "Math Refresher for Population Ecology"
+author: "Anna Tucker"
+date: "January 19, 2018"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.align = "center", fig.width = 5, fig.height = 4)
+```
+  
+  
+This is a general refresher of math and calculus concepts and notation for WILD 4890: Wildlife Population Science Lab. This is not a comprehensive review, but hopefully helps jogs your memory of math classes past.  
+  
+  
+### Symbols and notation
+  
+Not an exhaustive list, but some of the more common symbols/notation you'll encounter are:  
+  
+$X_i$ represents the "i-th" element of X. For example, consider a time series of values, where $X = (2,5,8,2,2,5,6,4)$ over 8 time steps. $X_3$ references the 3rd element of that sequence, so in this example $X_3 = 8$. You will often see population size referenced as $N_t$, indicating the population size ($N$) at time $t$.   
+   
+   
+$\sum$ means "sum." For example, $\sum_{i=1}^n X_i$ means "sum all elements of X from $X_1$ to $X_n$," where $n$ is the total number of things.  
+   
+  
+$\prod$ means "product." For example, $\prod_{i=1}^n X_i$ means "multiply together all elements of $X$ from $X_1$ to $X_n$" 
+   
+   
+$\frac{dy}{dx}$ means "the derivative of y with respect to x" or "the rate of change of y with respect to x." Derivatives can also be expressed as $f'(x)$ where $f(x)$ is the original function. More on derivatives below.  
+   
+   
+$\int$ indicates an integral. $\int x^2 dx$ means "the integral of $x^2$ over all values of $x$". Integrals are the opposite of derivates. $\int f'(x) dx = f(x)$.  
+     
+     
+  
+### Greek alphabet  
+  
+Many quantities in ecology are represented by Greek letters. We try to be consistent, but sometimes letters can be used to represent different things. They should always be defined in the context of each analysis. These are some letters you'll encounter the most and what they _typically_ are used to represent.  
+   
+   
+$\alpha$ is written "alpha" and pronounced "al-fa." You probably knew that. $\alpha$ is used to represent lots of different things, such as the intercept of a linear regression ($y = \alpha + \beta*x$). (Not to be confused with $\propto$ which means "is proportional to.")
+   
+   
+$\beta$ is written "beta" and pronounced "bay-ta." $\beta$ is also very versatile, but is frequently used to represent the effect of something on a response value of interest. For example, the slope of a linear regression ($y = \alpha + \beta*x$) represents the effect of x on the value of y.  
+   
+   
+$\gamma$ is written "gamma" and pronounced "gam-ah." $\gamma$ is usually used in equations when $\alpha$ and $\beta$ have already been assigned to something. It is also commonly used to represent rates of immigration and emigration.  
+   
+   
+$\Delta$ is written "delta" and pronouned "del-ta." You probably knew that too. $\Delta$ is used to represent change in something. We'll see it most often used to represent the change in population size, $N$, which we write as $\Delta N$.   
+   
+   
+$\lambda$ is written "lambda" and pronounced "lamb-duh." $\lambda$ is one of those letters that has a fairly fixed use in population ecology. It is used to represent the finite rate of population increase. For a population that is not increasing or decreasing, $\lambda = 1$.  
+   
+   
+$\phi$ is written "phi" and pronounced either "fie" or "fee", but I tend to hear "fie" (rhymes with "pie") used more often. $\phi$ is often used to represent annual survival probability.  
+   
+   
+$\theta$ is written "theta" and pronounced "thay-ta." $\theta$ is another general-use letter, but is often also used to represent data in a modeling context.  
+    
+    
+   
+The rest of the letters:  
+![](greek_alphabet.png)  
+  
+  
+### Calculus crash course  
+  
+  
+#### Log and e  
+  
+$log$ is a very useful function because it helps us make non-linear equations linear, which makes them easier to think about and mess around with. $log$ can take any number as its base, but in population ecology we are almost always talking about the "natural log," sometimes written $ln$, which is $log_e$. (Unless otherwise specified, assume that we are talking about the natural log, $ln$) $e$ is a number referred to as the "natural exponential" ($e = 2.718282...$) which is one of those numbers like $\pi$ which arises out of the beauty and complexity of the natural world.  
+  
+$ln$ and $e$ complement each other, such that $y = e^x$ and $ln(y) = x$ mean the same thing. We'll see $e$ in equations that represent density-independent population growth, like $$N_t = N_0e^{rt}$$. That function looks something like:  
+  
+```{r}
+r = 0.25
+t = c(1:50)
+N = 10*exp(r*t)
+
+plot(N ~ t, type = "l", ylab = "Population size", xlab = "Time")
+```
+  
+If we wanted to make the equation linear, we use $ln$: $$ln(N_t) = ln(N_0) + rt$$ And that function looks like this:  
+  
+```{r}
+r = 0.25
+t = c(1:50)
+ln_N = log(1) + r*t
+
+plot(ln_N ~ t, type = "l", ylab = "ln(Population size)", xlab = "Time")
+```
+  
+  
+#### Other log rules  
+  
+There are some general rules that govern how $log$ works, and will help you use $log$ to linear-ize equations.  
+   
+   
+$log(a*b) = log(a) + log(b)$  
+   
+  
+$log\left(\frac{a}{b}\right) = log(a) - log(b)$  
+   
+   
+$log(a^b) = b * log(a)$  
+   
+   
+$log(e^a) = a$  
+   
+   
+$e^{log(a)} = a$  
+  
+  
+#### Derivatives
+   
+As mentioned above, derivates are the rate of change (or slope) of a function. As an example, take the equation $$y = 4 + 3x$$
+
+This function looks like this:
+```{r}
+x = c(1:50)
+y = 4+3*x
+
+plot(y ~ x, type = "l")
+```
+  
+In this case, the derivative of the function is a constant value, 3. No matter where we are on the line, the slope is always 3. More formally, we could write $$\frac{dy}{dx} = 3$$
+  
+If we plotted the derivative, it would be pretty boring. It would look like this: 
+```{r}
+x = c(1:50)
+dydx = rep(3, length(x))
+
+plot(dydx ~ x, type = "l")
+```
+  
+  
+In population ecology we will often calculate, plot, and think about the change in a population size over time. What we are talking about is the derivate of a model that represents population size ($N$) over time ($t$). For the exponential model of population growth  $$\frac{dN}{dt} = rN$$
+
+The derivative tells us how the population growth rate changes over time.
+
+```{r, fig.width = 8, fig.height = 5}
+r = 0.25
+t = c(1:50)
+N = 10*exp(r*t)
+dNdt = r*N
+
+par(mfrow = c(1,2))
+plot(N ~ t, type = "l", ylab = "Population size", xlab = "Time")
+plot(dNdt ~ 1:N, type = "l", xlab = "Population size", ylab = "dN/dt (Population growth rate)")
+```
+  
+By plotting the derivative we can see that in the exponential model of population growth, the population growth rate increases linearly with population size. What do you think the derivative of the logistic growth model would look like?  
+   
+   
+```{r, fig.width = 8, fig.height = 5}
+r = 0.25
+t = c(1:50)
+K = 500
+N = K/(1+((K-10)/10)*exp(-r*t))
+dNdt = r*N*((K-N)/K)
+
+par(mfrow = c(1,2))
+plot(N ~ t, type = "l", ylab = "Population size", xlab = "Time")
+plot(dNdt ~ 1:N, type = "l", xlab = "Population size", ylab = "dN/dt (Population growth rate)")
+```
+
+   
+
+
+
+
+
+
+    
+
+
+
+
+  
+
+
+
+

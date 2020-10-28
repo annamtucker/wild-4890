@@ -1,0 +1,27 @@
+
+model{
+
+  R ~ dunif(0, 5)
+  q ~ dunif(0, 1)
+  f ~ dunif(0, 1)
+  a ~ dunif(0, 1)
+  
+  sigmaV ~ dunif(0, 20)
+  tauV <- pow(sigmaV, -2)
+
+  sigmaC ~ dunif(0, 3)
+  tauC <- pow(sigmaC, -2)
+
+  Vpred[1] ~ dunif(20000, 350000)
+  Cpred[1] ~ dunif(1500, 6000)
+  
+  for(i in 2:nyears){
+    Vpred[i] = Vpred[i-1] + R*Vpred[i-1] - a*Cpred[i-1]*Vpred[i-1]
+    Cpred[i] = Cpred[i-1] + a*f*Vpred[i-1]*Cpred[i-1] - q*Cpred[i-1]
+  }
+  
+  for(i in 2:nyears){
+    V[i] ~ dnorm(Vpred[i], tauV)
+    C[i] ~ dnorm(Cpred[i], tauC)
+  }
+}

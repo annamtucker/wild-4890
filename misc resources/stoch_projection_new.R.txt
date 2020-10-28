@@ -1,0 +1,212 @@
+# BIOL 521: PVA by Stochastic Leslie Matrix Projection 
+# Approach using matrix entries that specify a 
+# mean and variance (and a specific distribution) 
+# for each demographic variable in the matrix
+# Scott Creel 11/17/2011
+
+# INTRODUCTION
+# This exercise builds a stochastic Leslie matrix to estimate extinction risk for
+# African wild dogs, using the data from Tanzania's Selous Game Reserve that we used
+# in class to build a life table and estimate lambda.
+#
+# In the previous exercise you saw the 'multiple matrices' approach to 
+# stochastic projection... This approach assembles a set of Leslie matrices and randomly
+# draws one entire matrix for each step of projection.  This approach assumes that all of the
+# demographic parameters covary -- they ALL change at once.  
+
+# This assumption might not be correct, so you might want to do the projection in a manner that allows the
+# demographic parameters to vary independently of one another.  To do this,
+# you must make random draws from a distribution for each demographic parameter,
+# rather than randomly drawing whole matrices.  
+#
+# All that this requires is:
+
+# 1. Create a Leslie matrix in which each of the demographic parameters is specified by
+# a distribution rather than a constant. You do this by specifying a distribution, a mean and a variance.
+# There are other logical possibilities, but we'll use a binomial distribution for survival
+# rates and a Poisson distribution for fecundities. 
+
+# 2. Making a random draw from those distributions at each time step to get a 'stochastic Leslie matrix'.
+
+
+# 3. Projecting next year's population (tracked as a vector with the number
+# of individuals in each age class) with the stochastic Leslie matrix, just the same way you
+# would with a simple Leslie matrix with the mean for each demographic variable.
+
+
+# PART 1: BASIC DEMOGRAPHIC CALCULATIONS, SURVIVORSHIP CURVE.
+
+# These are the African wild dog data we used to build a life table in class.
+
+#  Enter lx  data (survivorship from birth) and examine survivorship curve
+
+lx <- c(1,0.75,0.63,0.49,0.37,0.29,0.13,0.09,0.02,0.02,0.02)
+log.lx <- log(lx)
+
+# create age variable x that corresponds to the lx values above
+x <- 0:10
+plot(x,log.lx,main="Survivorship Curve",xlab="Age Class - x",
+     ylab="Survivorship - log(lx)",pch=16)
+
+# add a line for perfect type II survivorship, just for visual comparison
+# type II survivorship is the case with a constant survival rate (sx)
+# for all age classes, which yields a straight line 
+# on a survivorship curve with a log-Y axis
+
+lines(x,(-3.9/10*x),type="l",lty=2) 
+
+
+# Enter mx data (fecundity) and calculate approximate growth rate
+# These values differ from the ones in the life table in class, because they 
+# are for a post-birth pulse annual census approach
+
+mx <- c(0,0,0.1,0.28,0.59,1.12,3.99,2.14,3.32,2.66,0)
+contrib.growth <- lx*mx                           # lx*mx for each age class
+Ro <- sum(contrib.growth)                         # summed to get Ro
+x.lxmx <- x*contrib.growth                        # x*lx*mx for each age class
+T <- sum(x.lxmx)/Ro                               # summed and divided by Ro to get generation time
+r.app <- log(Ro)/T                                # and then used to get approximate value of r
+
+
+# Look at the results
+Ro
+T
+r.app
+
+# Use euler equation to check if the approximate solution for r is reasonable.  
+# If the sum is close to one, the approximate solution is fairly accurate.
+# You Can get exact solution by altering the estimated value of r until the sum
+# equals one, but can much more easily get exact lambda [see below] as the dominant 
+# Eigenvalue of the Leslie matrix (and then r = ln(lambda))
+
+sum(exp(-r.app*x)*lx*mx)   # pretty close to one, approximate solution is not terrible for these data
+
+
+# PART 2: DETERMINISTIC LESLIE PROJECTION
+
+# convert lx data to sx values - you may have to think a bit to see why this works
+# (making the lx and sx columns on a piece of paper helps a lot) 
+
+Sx <- c(73/97,61/73,48/61,36/48,28/36,13/28,9/13,2/9,2/2,2/2,0/2)
+
+#convert mx to Fx (here for a post-birth pulse count)
+Fx <- mx*Sx[1]      # fecundity values
+S <- Sx[-1]         # dropping the first value
+F <- Fx[-1]
+
+# create an empty matrix (with all zeros) of the correct dimensions.
+les.mat <- matrix(rep(0,10*10),nrow=10) 
+
+# Fill in relevant values for the non-zero entries
+# -- row 1 is fecundities
+les.mat[1,] <- F
+
+# -- and the subdiagonal is annual survival rates, using a loop to efficiently assign them to
+#    the correct positions within the matrix
+for(i in 1:9){
+          les.mat[(i+1),i] <- S[i]
+}
+
+#examine the completed projection matrix: Fx values in the top row, Sx in subdiagonal, zeros elsewhere
+les.mat 
+
+# Deterministic projection with Leslie matrix.  This script does this in two ways
+# and compares results as a check. First you'll do it for yourself, and then use 
+# the popbio package, which has functions that make it much easier
+
+# First, load the popbio package (install it firstif you have not already done so)
+
+library(popbio)
+
+# Input a vector with the initial distribution of individuals 
+# in across age classes.  In this example, 97 newborns only.
+
+N <- c(97,0,0,0,0,0,0,0,0,0) 
+
+# Create an empty matrix [with NA values] to store the set of projected population vectors 
+# (as 10 columns)  for 30 years of projection into the future (each as row), starting with population
+# defined by N above.
+
+Dist_Year <- matrix(NA,nrow=31,ncol=10) 
+
+# Set the initial population in the first year.
+Dist_Year[1,] <- N 
+
+# Do the matrix multiplication for 30 years of projection, years 2 to 31
+# matrix multiplication uses %*% rather than *
+
+for(i in 2:31) {
+          Dist_Year[i,] <- les.mat %*% Dist_Year[i-1,]  
+}
+
+
+# Calculate and examine total size at each time step.  In the apply() function, the sum argument 
+# species to calculate a sum, the 1 specifes that rows should be summed (2 would specify to sum
+# columns), and the Dist_Year indicates what object to do all this on.  This is a very old-school
+# line of code, and there are MANY other ways to do this, either using the sum() command or using the 
+# summarise command in dplyr.  This code is using base R only.
+
+proj <- apply(Dist_Year,1,sum) 
+proj
+
+
+# Double-check using the Popbio package function 'pop.projection'.
+
+p <- pop.projection(les.mat,N,31) 
+p
+
+# Examine the results.  Note that results for popualtion size agree exactly, and that the
+# pop.projection function also provides a lot of other useful output, 
+# including lambda (dominant eigenvalue of the matrix) and the stable
+# age distribution (R eigenvector of the matrix). The stable age distribution
+# output is output as the proportion of the population in each age class.
+
+
+# Popbio includes a function eigen.analysis that will calculate the above information, plus
+# sensitivities and elasticities.  
+# Explore. Remember that you can press F1 with the cursor in a function to get help on it.
+
+eigen.analysis(les.mat)
+
+
+
+
+# PART 3: STOCHASTIC LESLIE PROJECTION
+
+# This uses 4 nested loops.  The i and j loops are innermost and draw stochastic fecundity and survival.
+# The t loop is next, and steps across 30 years of projection from an initial N vector
+# the a loop is outermost and replicates the 30 years of projection for 100 iterations.
+
+tot <- rep(NA,100) 				          # Dummy vector to store total population size for 100 replicates
+t <- 31 						# Number of years for the projection.
+for(a in 1:100){ 					# Repeat stochastic 't'-year projections 100 times.
+          stoc_year <- matrix(NA,nrow=t,ncol=10) 	          # Dummy matrix of age-class values. One row per time step. Columns are # individuals in each age class.
+          N <- c(97,rep(0,9)) 			# Initial values in each age-class.
+          stoc_year[1,] <- N 				# Assign these values to first row in age-class matrix.
+          for(i in 2:t){ 				# Begin loop for projections.
+                    lm <- les.mat 				# Set up a temporary Leslie matrix for each iteration 
+                    # with the correct mean fecundities and survival rates
+                    
+                    for(j in 1:10){ 				# Randomly draw fecundities for each class.
+                              lm[1,j] <- rpois(1,les.mat[1,j]) 	# Mean of Poisson is fecundity value.
+                    } 					# Ends the 'j' loop that draws fecundities.
+                    
+                    for(k in 1:9){ 				# Randomly draw survival probabilities for each class.
+                              n <- stoc_year[(i-1),k]                 # n is number of individuals to calculate live/die for.
+                              lm[(k+1),k] <- ifelse(n>1,rbinom(1,size=round(n),p=les.mat[(k+1),k])/n,0) # need ifelse statement to deal with the possibility
+                              # that there are no individuals in that age class.   
+                              
+                    } 							# Ends the 'k' loop to draw survival rates.
+                    
+                    stoc_year[i,] <- lm %*% stoc_year[(i-1),]                   # Matrix multiplication for next time-step.
+          } 							# Ends the 'i' loop projecting across time.
+          
+          tot[a] <- sum(stoc_year[t,])
+} 							# Ends the 'a' loop of one hundred iterations of the projections
+ci <- quantile(tot,probs=c(0.025,0.975)) 	                    # Find 95% confidence intervals on final population size.
+
+# Examine final population size for each of 100 iterations, and the 95% confidence interval on final population size
+# This is stochastic so I can't tell you exactly what numbers you'll get, but your confidence interval
+# on population size 30 years from now  probably does not overlap zero.  
+tot
+ci

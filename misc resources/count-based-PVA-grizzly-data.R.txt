@@ -1,0 +1,366 @@
+# BIOL 521:           Count Based PVA
+#			Scott Creel 9/30/2011
+#
+# INTRODUCTION
+# This lab implements the same count-based PVA approach that we examined in class using POPTOOLS
+# in Excel.  The data set comes from Eberhardt et al (1986) and Haroldson et al 1999, with  
+# monitoring data for Grizzly bears in Yellowstone National Park.  Grizzly bears (Ursus arctos horribilus) are
+# listed as threatened by the USFWS for most of the lower 48 states, with a few exceptions in areas where
+# they are listed as 'experimental, non-essential'.  (This status usually is associated with reintroduced
+# carnivore populations, so that they can be killed in the case of livestock conflicts.)
+# There is considerable discussion of delisting Grizzly bears in the Yellowstone region because of recent population
+# growth, geographic expansion and demographic trends.  Thus, this is an excellent example of a situation in which a 
+# PVA is useful.
+#
+# The basic data set is an index of population size that
+# includes information from several types of monitoring, including aerial counts and data from individually-known, 
+# radiocollared bears.
+
+# CODE
+
+# enter the years from which the annual counts come.
+# because there are no missing years (nice!) we can use the seq function
+
+year=seq(1959,1996)
+
+########## OR
+year=seq(from=1959,to=1996,by=1)
+##########
+
+# enter the counts 
+
+N=c(44,47,46,44,46,45,46,40,39,39,42,39,41,40,33,36,34,39,35,34,38,36,37,41,39,51,
+    47,57,48,60,65,74,69,65,57,70,81,99)
+
+#########################################
+
+# ALTERNATIVE ANALYSIS using data from the next 18 years to represent current conditions (these are different units, 
+# unreplicated females with cubs of the year)
+# year = seq(1997,2014)
+# N= c(32,36,34,38,43,53,39,50,32,48,51,45,43,52,40,50,60,51)
+
+#########################################
+
+#check that the data are entered correctly
+a= length(year)
+a
+year
+b=length(N)
+b
+N
+
+# calculate annual growth rates
+# recall that the intrinsic rate of increase (r)= ln(lambda), lambda = e^r
+# and of course we can't get lambda for the lastyear
+ln.lambda=log(N[-1]/N[-length(N)]) 
+
+# just renaming the growth rate variable to help keep things clear
+r=ln.lambda
+
+# examine the growth rates, r
+r
+
+##############Summary of the data and inspection
+summary(r)
+boxplot(r)
+hist(r)
+################
+
+# calculate mean & sd of log(lambda) values
+# we need the geometric mean of the lambda values, which is
+#equivalent to the arithmetic mean of r, as explained in class
+
+geomean=mean(r)
+
+
+#examine the geometric mean intrinsic rate of increase
+geomean
+
+# and the variance and standard deviation are calculated from the ln(lambda) values, 
+# because the growth rates (lambdas) are lognormally distributed while the r values are
+# normally distributed
+
+var.r=var(r)
+
+sd.r=sd(r)
+################
+
+#examine the variance and SD of the intrinsic rate of increase
+var.r
+sd.r
+
+
+# examine the actual population dynamics that were observed
+
+plot(year,N, xlab = "Year", ylab = "Population size", pch = 19, ylim=c(0,100))
+
+############## OR
+# fancy up the plot a bit
+plot(N~year, xlab = "Year", ylab = "Population size", pch = 19, ylim=c(0,100),
+     type="b", main="Grizzly Population size over years",cex.lab=1.5,
+     cex=1,cex.axis=1.5)
+############## 
+
+
+
+# add an trajectory for simple exponental growth over the same period, with
+# the observed geomean for r.  Recall that the number of years of growth is one
+# less than the number of annual counts.  For each year (x), we need to determine
+#  Y = the expected population size with exponental growth = Nt = N0 * e^rt
+
+
+lines(year,N[1]*exp(geomean)^(0:(length(N)-1)),lty=1,col='red')
+
+############# OR
+lines(year,N[1]*exp(geomean)^(0:(length(N)-1)),pch=19,col='red',type="b",cex=0.8)
+legend(1960,100,c("Empirical data"," Exponential Model prediction"),lty=c(1,1),col=c("black","red"),pch=c(19,19), bty="y")
+############
+
+################
+# The growth model matches the final population size.  The model is accurate in that sense.
+# It is also clear from the relationship of the actual points to the exponential growth 
+# model (red line) that the true dynamics were more complex than exponential growth
+# with a constant per capita growth rate.  The growth rate varied through time...  broadly,it was
+# negative for a span of years, then more strongly positive than the mean.
+
+# Projections for a simple PVA should, at a minimum, take the observed variation in growth rates into account.
+
+# Recall that the observed variation in growth rate, when calculated from Nt+1/Nt as we 
+# did, includes "sampling error" (apparent variation in growth that is not real).  The real variation in the
+# growth rate ("process error" or "process variance") is smaller than the sd.r value that we've
+# calculated.  A more thorough analysis (see Morris & Doak 2002, CH. 5) would partition out the process 
+# variance (exclduing sampling error) and use it for projections.
+
+# For now, CONSIDER THE IMPLICATIONS FOR THE PROJECTED DYNAMICS of not removing the sampling error.
+
+# project population dynamics across the observed span of years (hindcasting) and then 30 years into
+# the future (forecasting)
+
+N0 = N[1]           # setting initial population size for the projections equal to original pop size in the data
+
+
+# Define a threshold population size that we consider unacceptable.  For true local extirpation, this
+# would be zero.  I'm setting it equal to 48, which is the threshold required by the original 1982 
+# USFWS Grizzly Bear Recovery Plan, and by the amended plan from 1993. This is one of three criteria
+# that are currently be used in USFWS plans to 'uplist' the bear from threatened status.
+
+threshold=48             
+
+# Set the number of years to project forward (checking match to 38 years of data, plus 30 years projection)
+
+#project=68, need to match this in column extracted to plot in hist() below
+project = 68
+
+# Set the of model iterations to perform
+
+runs=1000  
+
+# Create an empty matrix to hold the output (population size with stochastic exponential growth), 
+# for the specified number of years (as rows) and iterations (as columns).  NA is the code for no data.
+# Remember you can use the F1 key in R Studio to get help to explain the arguments of the matrix()
+# function, or any other function.  
+# Also remember you can look at an object by just typing its name, or by using head() to examine the first
+# few rows and tail() to examine the last few rows.
+
+stoch.pop=matrix(NA,project,runs)       
+stoch.pop[1,]=N0
+
+
+# two nested loops to create stochastic population sizes
+
+for (i in 1:runs){					          # looping over 1000 runs of the stochastic model
+          for (t in 2:project){				# and looping over 68 years of projection within each of 1000 runs
+                    lambda=exp(rnorm(1,geomean,sd.r))		# draw a value of lambda from a lognormal distribution
+                    stoch.pop[t,i]=stoch.pop[(t-1),i]*lambda	# and project one time step from the current pop size
+                    if(stoch.pop[t,i]<=threshold) break  		# leave the loop if pop <= threshold
+          }
+}
+
+# examine the stochastic output (note that this is huge, 68 x 1000, so using head(stoch.pop)
+# or tail(stoch.pop) produces a big screen dump.  So we'll just look at the first and
+# last few rows (years) and  the first few columns (model iterations) of the output.  Note that
+# values of NA  remain in place if the population fell below the threshold prior to that year.
+
+stoch.pop[1:10, 1:10]
+stoch.pop[59:68, 991:1000]
+
+# examine the frequency distribution for population sizes in year 68, for all 1000 iterations
+
+hist(stoch.pop[68,], xlab = 'Population Size', font = 2, font.lab = 2, main = 'YNP Grizzlies after 68 years')
+
+############### PERCENTAGE OF RUNS UNDER THRESHOLD POPULATION SIZE 
+
+percentage.under<-(runs-length(which(stoch.pop[project,]>=0)))/runs*100 
+percentage.under
+
+## The WHICH command nested within the LENGTH command allows us to find the number  of runs 
+## with population size higher than threshold.  This is very tricky to follow if you are not careful, because
+## it relies on the 'empty' matrix stoch.pop being filled with NA values for missing data, and the BREAK
+## command jumping out of the simulation loops when pop <= threshold.  The command that calculates
+## percentage.under is taking the total number of runs, then subtracting the number of runs that
+## stayed above threshold, then dividing this by the number of runs and multiplying by 100 to 
+## obtain the percentage of runs with pseudo-extinction. When the entry in stoch.pop is greater than threshold,
+## the original NA value is replaced with a number (any number, so we can use >=0, but it would also
+## work equally well to use >=threshold, because the NA will never be replaced by a population size
+## less than threshold).
+#################
+
+############### MEAN YEAR WHEN POPULATION SIZE WENT BELOW THRESHOLD, FOR THOSE RUNS WITH A PSEUDO-EXTINCTION
+time<-NULL				## create an empty vector to hold results
+for (i in 1:runs){			          ## loop through all the iterations of the simulation
+          t<-max(which(stoch.pop[,i]>0)) 	## Find the maximum time when Population was >0 (as opposed to remaining NA) for each run
+          time<-c(time,t)			## Add this value to the end of a vector storing the times
+}					## end the loop
+time.under<-time[which(time<68)]
+hist(time.under,nclass=20, xlab = 'Year at which pseudoextinction occurred')
+abline(v=median(time.under),lw=3)
+#################
+
+
+##################################### Environmental stochasticity
+
+project=68 
+runs=1000  
+stoch.pop=matrix(NA,project,runs)
+
+## Divide r empirical data into "bad years (r<0)" and "good years (r>0)"
+
+geomean.bad<-mean(r[which(r<0)])
+geomean.good<-mean(r[which(r>0)])
+
+stoch.pop[1,]=N0
+
+# loop to create stochastic population sizes
+for (i in 1:runs){					                                        # looping over 1000 runs of the stochastic model
+          for (t in 2:project){					                    # and looping for 68 years of projection    
+                    geomean=sample(x=c(geomean.bad,geomean.good),size=1,prob=c(0.5,0.5),replace=T)  #Sample 1 number from a vector x with probabilities prob, here 50/50 for good/bad
+                    lambda=exp(rnorm(1,geomean,sd.r))		                              # draw a value of lambda from a lognormal distribution with the specified mean
+                    stoch.pop[t,i]=stoch.pop[(t-1),i]*lambda	                              # and project one time step from the current pop size
+                    if(stoch.pop[t,i]<=threshold) break  			                    # leave the loop if pop <= threshold
+          }
+}
+
+# examine the stochastic output (note that this is huge, 68 x 1000) so we only look at a bit of it
+stoch.pop[1:10,1:10]
+stoch.pop[59:68, 991:1000]
+
+percentage.under<-(runs-length(which(stoch.pop[project,]>=0)))/runs*100 ## WHICH command allows to find the arrow number in the vector which values is higher than 0 (as opposite to be NA))
+percentage.under
+########################################################
+
+
+# Plot the projected results
+par(mfrow=c(2,1))                                 #set up so next two plots are on same window for comparison
+
+stoch.pop.mean=apply(stoch.pop,1,mean, na.rm=T)
+log.pop.sd  =apply(log(stoch.pop),1,sd, na.rm=T)
+ucl =exp(log(stoch.pop.mean)+1.96*log.pop.sd)     #upper confidence limit
+lcl =exp(log(stoch.pop.mean)-1.96*log.pop.sd)     #lower confidence limit
+plot(1:project,stoch.pop.mean,'b',pch = 19, col = 'blue', ylim=c(0,max(ucl)),xlab='Years from 1959', ylab='Population Size')
+lines(1:project,lcl,'l', col = 'blue')
+lines(1:project,ucl,'l', col  = 'blue')
+
+#add the original data (in red) to evaluate hindcasting
+points(1:length(year), N, pch = 25, col = 'red', bg = 'red')
+legend(0,2100, c("Projection with 95% CL", "Data"), lty = 1, col = c('blue', 'red'), pch =c(19,25),cex=0.7,bt="n")
+
+# same again with log Y axis so that the upper CL does not obscure other patterns
+plot(1:project,stoch.pop.mean, log = "y", type = 'b', pch = 19, col = 'blue', ylim=c(1,max(ucl)), xlab='Years from 1959',
+     ylab='Population Size')
+lines(1:project,lcl,'l',  col = 'blue')
+lines(1:project,ucl,'l',  col  = 'blue')
+points(1:length(year), N, pch = 25, col = 'red', bg = 'red')
+legend(0,2000, c("Projection with 95% CL", "Data"), lty = 1, col = c('blue', 'red'), pch =c(19,25),cex=0.7,bt="n")
+
+#################################################
+
+
+# Extinction Risk using popbio package
+
+library(popbio)  	# load the popbio package
+
+# stoch.projection is a function defined in the popbio package.  As with any
+# function, you can type ?stoch.projection to see the arguments for the
+# function and its outputs. 
+
+# number of projections, i.e. the number of simulated population growth trajectories
+reps = 1000
+
+#set of growth rates to sample with replacement for growth at each time step
+lambda=(N[-1]/N[-length(N)]) 
+
+final.N<-stoch.projection(as.list(lambda), N[1], nreps=reps, tmax = 50)
+final.N
+par(mfrow=c(2,1))
+hist(final.N, xlab = "Population projected for year 50", col = 'light blue', main = "Exponential growth model",nclass=20)
+abline(v=sum(n), lty=3)  
+
+ext.threshold = 80  	# set the definition of pseudoextinction, i.e. the number below which the
+# population should be re-listed under the ESA, or some similar threshold of interest 
+
+abline(v=ext.threshold, lty=1, col = 'red')
+
+#########################
+ext = 0  #  zero the counter for number of extinctions before tallying extinctions
+# loop to tally up the number of cases where N.final is < ext.threshold
+for (i in 1:length(final.N))
+{if (final.N[i] < ext.threshold) ext = ext+1
+}
+ext  # number of cases where N.final is < ext.threshold
+prob.ext = ext/reps
+prob.ext  # proportion of cases where N.final is < ext.threshold, i.e. Prob{pseudoextinction}
+
+
+###########OR = Calculation of treshold
+
+ext<-length(which(final.N<ext.threshold)) # number of cases where N.final is < ext.threshold
+prob.ext = ext/reps
+prob.ext  # proportion of cases where N.final is < ext.threshold, i.e. Prob{pseudoextinction}
+
+
+# Modify the code to examine the effect of different pseudoextinction thresholds, different time periods for projection,
+# different initial population sizes.  There are other modifications one could examine.
+
+# For example, consider some simple ways to incorporate density-dependent population growth.
+
+# number of projections, i.e. the number of simulated propoualtion growth trajectories
+reps = 1000
+
+#set of growth rates to sample with replacement for growth at each time step
+lambda=(N[-1]/N[-length(N)])
+K = 2000
+damp = 1 - (N[-1]/K)
+dd.lambda = lambda*damp
+lambda
+damp
+dd.lambda 
+
+final.N<-stoch.projection(as.list(dd.lambda), N[1], nreps=reps, tmax = 50)
+final.N
+
+hist(final.N, xlab = "Population projected for year 50", col = 'brown', main = "DD growth model",nclass=20)
+
+
+ext.threshold = 80  	# set the definition of pseudoextinction, i.e. the number below which the
+# population should be re-listed under the ESA, or some similar threshold of interest 
+
+abline(v=ext.threshold, lty=3, col = 'red')
+
+
+###############################
+ext = 0  #  zero the counter for number of extinctions before tallying extinctions
+
+#loop to tally up the number of cases where N.final is < ext.threshold
+for (i in 1:length(final.N))
+{if (final.N[i] < ext.threshold) ext = ext+1
+}
+ext  # number of cases where N.final is < ext.threshold
+prob.ext = ext/reps
+prob.ext  # proportion of cases where N.final is < ext.threshold, i.e. Prob{pseudoextinction}
+
+
+###########OR = Calculation of treshold
+
+ext<-length(which(final.N<ext.threshold)) # number of cases where N.final is < ext.threshold
+prob.ext = ext/reps
+prob.ext  # proportion of cases where N.final is < ext.threshold, i.e. Prob{pseudoextinction}
